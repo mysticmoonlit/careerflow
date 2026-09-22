@@ -228,12 +228,57 @@ node test_browser_e2e.js
 
 ---
 
-## Environment Variables (Optional)
+## Environment Variables
 
-The application works out of the box with safe development defaults. For production deployment, configure the following environment variables:
+The application works out of the box with safe local development defaults. For production deployment, configure the following variables:
 
-| Variable | Default | Purpose |
+### Backend (Render)
+| Variable | Description | Example / Recommended Value |
 |---|---|---|
-| `DJANGO_SECRET_KEY` | Development key | Secret key for cryptographic signing |
-| `DJANGO_DEBUG` | `True` | Set to `False` in production |
-| `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated list of allowed hostnames |
+| `DJANGO_SECRET_KEY` | Production secret key for cryptographic signing | `generate a random 50+ character string` |
+| `DJANGO_DEBUG` | Enable/disable debug mode | `False` |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated list of allowed hostnames | `localhost,127.0.0.1,.onrender.com` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgres://user:pass@host:5432/careerflow` |
+| `FRONTEND_URL` | Deployed Vercel frontend URL | `https://careerflow.vercel.app` |
+| `CORS_ALLOWED_ORIGINS` | Additional allowed origins for CORS | `https://careerflow.vercel.app` |
+| `CSRF_TRUSTED_ORIGINS` | Additional trusted origins for CSRF | `https://careerflow.vercel.app,https://*.vercel.app` |
+
+### Frontend (Vercel)
+| Variable | Description | Example / Recommended Value |
+|---|---|---|
+| `VITE_API_URL` | Deployed Render backend API URL | `https://careerflow-backend.onrender.com/api` |
+
+---
+
+## Production Deployment Guide
+
+### Backend: Render (Django + PostgreSQL + WhiteNoise)
+
+1. **Create PostgreSQL Database on Render**:
+   - New + > **PostgreSQL**
+   - Name: `careerflow-db`
+   - Database: `careerflow`
+   - Plan: Free
+2. **Create Web Service on Render**:
+   - New + > **Web Service**
+   - Connect repository: `https://github.com/mysticmoonlit/careerflow`
+   - Runtime: **Python 3**
+   - Build Command: `./build.sh`
+   - Start Command: `gunicorn backend.wsgi:application`
+3. **Environment Variables on Render**:
+   - `DATABASE_URL`: Add from database connection string (`careerflow-db`)
+   - `DJANGO_SECRET_KEY`: Generate a random 50+ character secret
+   - `DJANGO_DEBUG`: `False`
+   - `DJANGO_ALLOWED_HOSTS`: `localhost,127.0.0.1,.onrender.com`
+   - `FRONTEND_URL`: `https://<your-vercel-app>.vercel.app`
+
+### Frontend: Vercel (React + Vite)
+
+1. **Import Repository on Vercel**:
+   - Import `https://github.com/mysticmoonlit/careerflow`
+   - Framework Preset: **Vite**
+   - Root Directory: `careerflow`
+2. **Environment Variables on Vercel**:
+   - `VITE_API_URL`: `https://<your-render-backend>.onrender.com/api`
+3. **Deploy**:
+   - Click **Deploy**. Vercel will install dependencies, build the production bundle, and route all SPA traffic via `vercel.json`.

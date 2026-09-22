@@ -15,8 +15,19 @@ function getCookie(name) {
   return cookieValue;
 }
 
+// Support VITE_API_URL and VITE_API_BASE_URL environment variables from Vercel
+const rawBaseURL =
+  (typeof import.meta !== "undefined" && import.meta.env && (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL)) ||
+  "http://localhost:8000/api";
+
+// Ensure baseURL ends with /api (without double slashes)
+const sanitizedBase = rawBaseURL.trim().replace(/\/+$/, "");
+const baseURL = sanitizedBase.endsWith("/api") ? sanitizedBase : `${sanitizedBase}/api`;
+
+let fallbackCsrfToken = null;
+
 const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL,
   withCredentials: true,
   xsrfCookieName: "csrftoken",
   xsrfHeaderName: "X-CSRFToken",
@@ -25,8 +36,19 @@ const api = axios.create({
   },
 });
 
+// Cache CSRF token from server response (e.g. /auth/csrf/) for cross-origin hosting
+api.interceptors.response.use(
+  (response) => {
+    if (response?.data?.csrfToken) {
+      fallbackCsrfToken = response.data.csrfToken;
+    }
+    return response;
+  },
+  (error) => Promise.reject(error)
+);
+
 api.interceptors.request.use((config) => {
-  const csrfToken = getCookie("csrftoken");
+  const csrfToken = getCookie("csrftoken") || fallbackCsrfToken;
   if (csrfToken && !config.headers["X-CSRFToken"]) {
     config.headers["X-CSRFToken"] = csrfToken;
   }
