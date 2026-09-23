@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "./api";
+import api, { ensureCsrfToken } from "./api";
 import "./App.css";
 
 import Sidebar from "./components/Sidebar";
@@ -54,12 +54,8 @@ function App() {
 
   async function checkUser() {
     try {
-      // Also request CSRF token so it sets the cookie
-      try {
-        await api.get("/auth/csrf/");
-      } catch {
-        // Ignored
-      }
+      // Ensure CSRF token is initialized
+      await ensureCsrfToken();
 
       const response = await api.get("/auth/me/");
       setUser(response.data.user);
@@ -101,6 +97,7 @@ function App() {
     clearAuthMessages();
 
     try {
+      await ensureCsrfToken();
       const response = await api.post("/auth/login/", loginForm);
       setUser(response.data.user);
       setPage("dashboard");
@@ -119,6 +116,7 @@ function App() {
     clearAuthMessages();
 
     try {
+      await ensureCsrfToken();
       const response = await api.post("/auth/register/", registerForm);
       setUser(response.data.user);
       setPage("dashboard");

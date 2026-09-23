@@ -33,7 +33,7 @@ DEBUG = os.environ.get(
 # Allowed hosts: accept comma-separated list from environment
 _raw_allowed_hosts = os.environ.get(
     "DJANGO_ALLOWED_HOSTS",
-    os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,.onrender.com"),
+    os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,.onrender.com,testserver"),
 )
 ALLOWED_HOSTS = [
     host.strip()
@@ -166,6 +166,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS & CSRF Configuration
 CORS_ALLOW_CREDENTIALS = True
+CORS_EXPOSE_HEADERS = ["Content-Type", "X-CSRFToken", "csrftoken"]
 
 # Base allowed origins (local development)
 _default_cors_origins = [

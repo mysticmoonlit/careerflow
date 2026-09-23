@@ -277,3 +277,53 @@ class CareerFlowAPITests(TestCase):
         self.assertEqual(res_analytics.data["total_applications"], 3)
         self.assertEqual(res_analytics.data["offer_metrics"]["total_offers"], 1)
         self.assertEqual(res_analytics.data["interview_metrics"]["total"], 1)
+
+    def test_csrf_token_rotation_and_enforcement(self):
+        from django.test import Client
+        csrf_client = Client(enforce_csrf_checks=True)
+
+        # 1. Fetch initial CSRF token
+        res_csrf = csrf_client.get("/api/auth/csrf/")
+        self.assertEqual(res_csrf.status_code, status.HTTP_200_OK)
+        self.assertIn("csrfToken", res_csrf.json())
+        token1 = res_csrf.json()["csrfToken"]
+        self.assertTrue(len(token1) >= 32)
+
+        # 2. Login with token1
+        res_login = csrf_client.post(
+            "/api/auth/login/",
+            data={"username": "testuser", "password": "Password123!"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token1,
+        )
+        self.assertEqual(res_login.status_code, status.HTTP_200_OK)
+        self.assertIn("csrfToken", res_login.json())
+        token2 = res_login.json()["csrfToken"]
+
+        # 3. Create job application using the rotated token from login response
+        res_app = csrf_client.post(
+            "/api/applications/",
+            data={"company_name": "TestCo", "job_title": "Full Stack", "status": "applied"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token2,
+        )
+        self.assertEqual(res_app.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res_app.json()["company_name"], "TestCo")
+
+        # 4. Patch job application with token2
+        app_id = res_app.json()["id"]
+        res_patch = csrf_client.patch(
+            f"/api/applications/{app_id}/",
+            data={"status": "interview"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=token2,
+        )
+        self.assertEqual(res_patch.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_patch.json()["status"], "interview")
+
+        # 5. Delete application with token2
+        res_del = csrf_client.delete(
+            f"/api/applications/{app_id}/",
+            HTTP_X_CSRFTOKEN=token2,
+        )
+        self.assertEqual(res_del.status_code, status.HTTP_204_NO_CONTENT)

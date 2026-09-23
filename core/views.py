@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -46,6 +47,7 @@ def health_check(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @authentication_classes([])
+@ensure_csrf_cookie
 def csrf_token_view(request):
     csrf_token = get_token(request)
     return Response({
@@ -79,6 +81,7 @@ def register(request):
             {
                 "message": "Account created successfully.",
                 "user": UserSerializer(user).data,
+                "csrfToken": get_token(request),
             },
             status=status.HTTP_201_CREATED,
         )
@@ -123,6 +126,7 @@ def user_login(request):
     return Response({
         "message": "Login successful.",
         "user": UserSerializer(user).data,
+        "csrfToken": get_token(request),
     })
 
 
@@ -131,7 +135,8 @@ def user_login(request):
 def user_logout(request):
     logout(request)
     return Response({
-        "message": "Logout successful."
+        "message": "Logout successful.",
+        "csrfToken": get_token(request),
     })
 
 
@@ -142,6 +147,7 @@ def current_user(request):
     return Response({
         "user": UserSerializer(request.user).data,
         "profile": UserProfileSerializer(profile).data,
+        "csrfToken": get_token(request),
     })
 
 
